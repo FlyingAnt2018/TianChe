@@ -1,9 +1,18 @@
 *
 !.gitignore
 !README.md
-!templates/
-!templates/help_button.html
 
+!conf/
+!conf/*
+!data/
+!data/*
 !doc/
-!doc/hard_wire_framework.*
+!doc/*
+!utils/
+!utils/*
+!weights/
+!weights/*
+
 !flask_app.py
+
+/**/__pycache__/
