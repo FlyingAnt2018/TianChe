@@ -3,4 +3,7 @@
 !README.md
 !templates/
 !templates/help_button.html
+
+!doc/
+!doc/hard_wire_framework.*
 !flask_app.py

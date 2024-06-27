@@ -1,6 +1,23 @@
 from flask import Flask, render_template, Response, request, jsonify
 import cv2
 
+class YOLOV5:
+    '''
+    实现yolov5的功能
+    '''
+    def __init__(self) -> None:
+        pass
+
+    def feed_data(self):
+        pass
+
+    def pre_process(self):
+        '''推理前数据预处理'''
+        pass
+
+    def post_process(self):
+        
+
 class VideoApp:
     '''
     负责将接收到的视频流推送到 远程浏览器
@@ -16,6 +33,9 @@ class VideoApp:
 
     def generate(self):
         while True:
+            '''
+            在这里拿 yolo 后处理的数据
+            '''
             ret, frame = self.cap.read()
             frame = cv2.resize(frame, (640, 480))
             if not ret:
