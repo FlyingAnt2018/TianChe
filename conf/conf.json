@@ -9,7 +9,7 @@
     "conf_thre": "0.5",
 
     "//":  "配置参数",
-    "template_folder": "/conf",
+    "template_folder": "conf",
     "plateform_type": "win",
     
     "//":  "图像缩放参数",

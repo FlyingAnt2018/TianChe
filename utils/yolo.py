@@ -96,7 +96,7 @@ class YOLOV5(BaseClass):
         #-------------------------------------------------------
         for org_box in batch_boxes:
             org_box=np.squeeze(org_box)
-            conf = org_box[..., 4] > self.conf_thres
+            conf = org_box[..., 4] > self.conf_thre
             box = org_box[conf == True]
             #-------------------------------------------------------
             #	通过argmax获取置信度最大的类别

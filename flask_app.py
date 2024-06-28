@@ -3,6 +3,7 @@ import cv2
 import json
 import copy
 import numpy as np
+from gevent import pywsgi
 
 
 from pathlib import Path
@@ -13,7 +14,7 @@ from os.path import join as opj
 from multiprocessing import Process, Queue
 from flask import Flask, render_template, Response, request, jsonify
 
-from utils.baseclass import BaseClass
+from utils.baseclass import BaseClass, workspace
 from utils.video_demo import VideoCaptureThread
 
     
@@ -26,9 +27,7 @@ class VideoApp(BaseClass):
         super().__init__(conf_path)
 
         # 1. 解析 json文件
-        template_folder = self.conf["template_folder"]
-
-        self.app = Flask(__name__, template_folder)
+        self.app = Flask(__name__, template_folder=workspace / self.conf["template_folder"])
         self.app.add_url_rule('/', 'index_cavas', self.index)
         self.app.add_url_rule('/video_feed', 'video_feed', self.video_feed)
         self.app.add_url_rule('/receive_coordinates', 'receive_coordinates', self.receive_coordinates, methods=['POST'])
@@ -138,6 +137,11 @@ class VideoApp(BaseClass):
 
     def run(self, host='0.0.0.0', debug=False, port=5000):
         self.app.run(host = host, debug=debug, port = port)
+
+        '''
+        self.server = pywsgi.WSGIServer((host, port), self.app)
+        self.server.serve_forever()
+        '''
 
 if __name__ == '__main__':
 
