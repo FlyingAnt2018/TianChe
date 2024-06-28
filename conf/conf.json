@@ -1,0 +1,18 @@
+{
+    "//":  "两台相机的 url",
+    "camera_url_a": "rtsp://admin:falconix12@10.168.2.172:554/h264/ch1/main/av_stream",
+    "camera_url_b": "rtsp://admin:falconix12@10.168.2.172:554/h264/ch1/main/av_stream",
+
+    
+    "//":  "模型配置参数",
+    "onnx_path": "weights/model_bs2.onnx",
+    "conf_thre": "0.5",
+
+    "//":  "配置参数",
+    "template_folder": "/conf",
+    "plateform_type": "win",
+    
+    "//":  "图像缩放参数",
+    "img_w" : "640",
+    "img_h" : "384"
+}

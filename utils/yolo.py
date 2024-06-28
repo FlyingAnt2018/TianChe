@@ -4,13 +4,18 @@ import cv2
 import os
 import glob
 from typing import List, Tuple, AnyStr
+from .baseclass import BaseClass
 import copy
 
 from utils.common import decorator_timer, xywh2xyxy, nms
-CLASSES = ['person']
+CLASSES = ['P']
 
-class YOLOV5():
-    def __init__(self, onnxpath:str, time_measure=False):
+class YOLOV5(BaseClass):
+    def __init__(self, conf_path:str, time_measure=False):
+        
+        super().__init__(conf_path)
+        onnxpath = self.conf["onnx_path"]
+        self.conf_thre = float(self.conf["conf_thre"])
         self.time_measure = time_measure
         self.onnx_session=onnxruntime.InferenceSession(onnxpath)
         self.input_name=self.get_input_name()
@@ -82,7 +87,7 @@ class YOLOV5():
 
         return outputs
     
-    def post_process(self, batch_boxes,conf_thres = 0.25, iou_thres = 0.5):
+    def post_process(self, batch_boxes, iou_thres = 0.5):
         ''' #过滤掉无用的框'''
         outputs = []
         #-------------------------------------------------------
@@ -91,7 +96,7 @@ class YOLOV5():
         #-------------------------------------------------------
         for org_box in batch_boxes:
             org_box=np.squeeze(org_box)
-            conf = org_box[..., 4] > conf_thres
+            conf = org_box[..., 4] > self.conf_thres
             box = org_box[conf == True]
             #-------------------------------------------------------
             #	通过argmax获取置信度最大的类别
@@ -126,7 +131,9 @@ class YOLOV5():
                     output.append(curr_cls_box[k])
             #output = np.array(output)
             outputs.append(output)
-        return np.array(outputs)
+        
+        #outputs = np.array(outputs)
+        return outputs
 
     @decorator_timer
     def onnx_run(self, sesson, input):
