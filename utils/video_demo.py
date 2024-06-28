@@ -13,6 +13,8 @@ class VideoCaptureThread(threading.Thread):
         self.running = True
         self.img_size = img_size
 
+        self.switch_flag = True
+
     def run(self):
         self.cap = cv2.VideoCapture(self.video_source)
         if not self.cap.isOpened():
@@ -26,6 +28,10 @@ class VideoCaptureThread(threading.Thread):
             if not ret:
                 print(f"Failed to grab frame from {self.video_source}")
                 break
+            if self.switch_flag:
+                self.switch_flag = False
+                print(f"[Info] {self.thread_name} raw image h = {frame.shape[0]}, w = {frame.shape[1]}")
+
             frame = cv2.resize(frame, self.img_size)
 
             # Try to put the frame in the queue

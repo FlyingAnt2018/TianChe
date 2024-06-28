@@ -5,9 +5,8 @@ import copy
 import numpy as np
 from gevent import pywsgi
 
-
 from pathlib import Path
-from utils.yolo import YOLOV5, CLASSES
+from utils.yolo import DetModel, CLASSES
 from datetime import datetime
 from os.path import join as opj
 
@@ -17,13 +16,11 @@ from flask import Flask, render_template, Response, request, jsonify
 from utils.baseclass import BaseClass, workspace
 from utils.video_demo import VideoCaptureThread
 
-    
 class VideoApp(BaseClass):
     '''
     负责将接收到的视频流推送到 远程浏览器
     '''
     def __init__(self, conf_path=""):
-
         super().__init__(conf_path)
 
         # 1. 解析 json文件
@@ -33,7 +30,7 @@ class VideoApp(BaseClass):
         self.app.add_url_rule('/receive_coordinates', 'receive_coordinates', self.receive_coordinates, methods=['POST'])
 
         # 2. 创建目标检测器
-        self.detector = YOLOV5(conf_path, time_measure=False)
+        self.detector = DetModel(conf_path, time_measure=False)
         # 创建两个相机的缓存队列
         self.queue_camera_a = Queue(maxsize=1)
         self.queue_camera_b = Queue(maxsize=1)
@@ -82,12 +79,14 @@ class VideoApp(BaseClass):
                 # (top, left) 是文本的起始坐标，通常设置在边界框的左上角。
                 # cv2.FONT_HERSHEY_SIMPLEX 指定字体类型。
                 # 0.6 是字体缩放比例。(0, 0, 255) 是字体颜色，这里表示红色。2 是线条的粗细。
+                '''
                 cv2.putText(image, '{0} {1:.2f}'.format(CLASSES[cl], score),
                             (top, left ),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.6, (0, 0, 255), 2)
             cv2.imshow(f'Detected Image {idx}', image)
         cv2.waitKey(5)  # 等待用户按键
+                '''
 
 
     def generate(self):
@@ -151,7 +150,7 @@ if __name__ == '__main__':
 
 
     '''
-    detector = YOLOV5()
+    detector = DetModel()
     frame = cv2.imread('/media/marc/DATA1/work/code/CAMERA/doc/test.jpg')
     detector.detect(frame, frame)
     '''

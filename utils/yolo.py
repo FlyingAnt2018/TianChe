@@ -10,7 +10,7 @@ import copy
 from utils.common import decorator_timer, xywh2xyxy, nms
 CLASSES = ['P']
 
-class YOLOV5(BaseClass):
+class DetModel(BaseClass):
     def __init__(self, conf_path:str, time_measure=False):
         
         super().__init__(conf_path)
@@ -20,7 +20,7 @@ class YOLOV5(BaseClass):
         self.onnx_session=onnxruntime.InferenceSession(onnxpath)
         self.input_name=self.get_input_name()
         self.output_name=self.get_output_name()
-        print(f"YOLOV5 input_name = {self.input_name}, output_name = {self.output_name}")
+        print(f"DetModel input_name = {self.input_name}, output_name = {self.output_name}")
    
     #-------------------------------------------------------
     def get_input_name(self):
@@ -176,7 +176,7 @@ def draw(images: list, batch_boxes):
 
 if __name__=="__main__":
     onnx_path='/media/marc/DATA1/work/code/CAMERA/weights/model_bs2.onnx'
-    model=YOLOV5(onnx_path)
+    model=DetModel(onnx_path)
     img_path = '/media/marc/DATA_DISK/Object_detection/BGVP-dataset/BGVP-main/BGVP-main/Dataset/valid/valid/'
     img_paths = glob.glob(os.path.join(img_path, '*.jpg'))[:20]
     for path in img_paths:
