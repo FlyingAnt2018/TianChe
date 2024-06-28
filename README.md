@@ -3,7 +3,7 @@
 
 -------
 硬件布线方式如下图所示
-![天车系统硬件结构](doc\hard_wire_framework.png)
+![天车系统硬件结构](doc/hard_wire_framework.png)
 
 ## 软件实现进展
 - [x] 解析图像视频流
