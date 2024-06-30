@@ -50,9 +50,9 @@ class VideoCaptureThread(threading.Thread):
                 self.frame_queue.put((self.thread_name, frame, time_stamp))
             '''
             
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                self.running = False
-                break
+            #if cv2.waitKey(1) & 0xFF == ord('q'):
+            #    self.running = False
+            #    break
         
         self.cap.release()
 

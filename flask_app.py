@@ -16,6 +16,43 @@ from flask import Flask, render_template, Response, request, jsonify
 from utils.baseclass import BaseClass, workspace
 from utils.video_demo import VideoCaptureThread
 
+from enum import Enum
+
+# def judge_selected_id(self):
+class CameraID(Enum):
+    ID_FIRST = 1
+    ID_SECOND = 2
+
+class DangerArea:
+    '''危险区域类'''
+    def __init__(self):
+        # box 不生效
+        self.box_valid = False
+        self.center = []
+        # x_min, y_min, x_max, y_max
+        self.box_area = [0,0,0,0]
+    
+    def set(self, mouse_request:dict):
+        '''设置 area'''
+        # 设置
+        if mouse_request.get("button") == "left":
+            if mouse_request["startX"] == mouse_request["endX"] or mouse_request["startY"] == mouse_request["endY"]:
+                return
+            self.box_valid = True
+            self.box_area = [mouse_request["startX"], mouse_request["startY"], mouse_request["endX"], mouse_request["endY"]]
+        else:
+            # 取消
+            self.box_valid = False
+        return
+    
+    @property
+    def pt_lt(self):
+        return (self.box_area[0], self.box_area[1])
+    
+    @property
+    def pt_rb(self):
+        return (self.box_area[2], self.box_area[3])
+
 class VideoApp(BaseClass):
     '''
     负责将接收到的视频流推送到 远程浏览器
@@ -49,12 +86,104 @@ class VideoApp(BaseClass):
             self.producer_a = None
             self.producer_b = None
 
+        self.danger_area_first = DangerArea()
+        self.danger_area_second = DangerArea()
+
+    @staticmethod
+    def raw_data_normalize(data):
+        '''
+        将绘制的box规范化
+        '''
+        data_copy = copy.deepcopy(data)
+        data["startX"] = min(data_copy["startX"], data_copy["endX"])
+        data["endX"] = max(data_copy["startX"], data_copy["endX"])
+
+        
+        data["startY"] = min(data_copy["startY"], data_copy["endY"])
+        data["endY"] = max(data_copy["startY"], data_copy["endY"])
+
+        return data
+
+    def judge_select_camera(self, mouse_request:dict):
+        '''
+        根据鼠标返回的信息，判断在操作哪一个相机
+        '''
+        # 根据中心点，判断在是哪一个相机
+        center = ((mouse_request["startX"] + mouse_request["endX"]) / 2, 
+                  (mouse_request["startY"] +  mouse_request["endY"]) / 2)
+        
+        if center[1] > (self.post_img_height - 1) or center[0] > (self.post_img_width - 1):
+            # 第二个相机的话，对box进行归一化
+            self.box_clip_and_normalize(mouse_request, CameraID.ID_SECOND)
+            
+            return CameraID.ID_SECOND
+        else:
+            self.box_clip_and_normalize(mouse_request, CameraID.ID_FIRST)
+            return CameraID.ID_FIRST
+
+    def box_clip_and_normalize(self, data:dict, camera_id):
+        if camera_id == CameraID.ID_FIRST:
+            data["endY"] = data["endY"] if data["endY"] < self.post_img_height else self.post_img_height - 1
+        else:
+            data["startY"] -= self.post_img_height
+            data["startY"] = data["startY"] if data["startY"] >= 0 else 0
+
+            data["endY"] -= self.post_img_height
+            data["endY"] = data["endY"] if data["endY"] >= 0 else 0
+
+        return data
+
+    @staticmethod
+    def cal_box_center(mouse_request:dict):
+        return ()
+
+    @staticmethod
+    def cal_hor_lineseg_iou(range_a, range_b):
+        """
+        计算两个线段的水平iou
+        """
+        left, right = range_a
+        left_d, right_d = range_b
+
+        r_border = min(right, right_d)
+        l_boarder = max(left, left_d)
+        if r_border < l_boarder:
+            return 0
+        return (r_border - l_boarder) * 1.0 / ((right - left) + (right_d - left_d) - (r_border - l_boarder))
+
+    @staticmethod
+    def box_in_danger_area(box, dangre_area : DangerArea):
+        #---------------------
+
+        #---------------------
+        left, top, right, bottom = box
+        left_d, top_d, right_d, bot_d = dangre_area.box_area
+        '''
+        判断 目标是否在危险区域
+        '''
+        hor_iou = video_app.cal_hor_lineseg_iou([left, right],[left_d, right_d])
+        
+        if hor_iou > 0:
+            if bottom >= top_d and bottom <= bot_d:
+                return True
+        return False
+
     def draw_box(self, images: list, batch_boxes):  
+        # 设置 危险区域
+        for idx, image in zip(range(2), images):
+            if(idx == 0):
+                if self.danger_area_first.box_valid:
+                    cv2.rectangle(image, self.danger_area_first.pt_lt, self.danger_area_first.pt_rb, (255, 255, 255), 2)
+            else:
+                if self.danger_area_second.box_valid:
+                    cv2.rectangle(image, self.danger_area_second.pt_lt, self.danger_area_second.pt_rb, (255, 255, 255), 2)
+
         #-------------------------------------------------------
         #	取整，方便画框
         #-------------------------------------------------------
-        #print(batch_boxes)
-        for idx, image, box_data in zip(range(2), images, batch_boxes):
+        for idx, image, box_data in zip(range(len(batch_boxes)), images, batch_boxes):
+            if idx == 1:
+                a = 0
             box_data = np.array(box_data)
             if box_data.shape[0] == 0:
                 continue
@@ -65,14 +194,25 @@ class VideoApp(BaseClass):
             classes=box_data[...,5].astype(np.int32) 
 
             for box, score, cl in zip(boxes, scores, classes):
-                top, left, right, bottom = box
+                left, top, right, bottom = box
                 # print('class: {}, score: {}'.format(CLASSES[cl], score))
                 # print('box coordinate left,top,right,down: [{}, {}, {}, {}]'.format(top, left, right, bottom))
 
                 # cv2.rectangle 是 OpenCV 中用于在图像上绘制矩形的函数。这里用它来绘制边界框。
                 # (top, left) 和 (right, bottom) 分别是矩形（边界框）的左上角和右下角坐标。
                 # (255, 0, 0) 是颜色代码，这里表示蓝色。2 是线条的粗细。
-                cv2.rectangle(image, (top, left), (right, bottom), (255, 0, 0), 2)
+
+                if idx == 0:
+                    if self.danger_area_first.box_valid and VideoApp.box_in_danger_area(box, self.danger_area_first):
+                        cv2.rectangle(image, (left, top), (right, bottom), (0, 0, 255), 2)
+                    else:
+                        cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 1)
+                
+                elif idx == 1:
+                    if self.danger_area_second.box_valid and VideoApp.box_in_danger_area(box, self.danger_area_second):
+                        cv2.rectangle(image, (left, top), (right, bottom), (0, 0, 255), 2)
+                    else:
+                        cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 1)
 
                 # cv2.putText 是 OpenCV 中用于在图像上绘制文本的函数。
                 # '{} {:.2f}'.format(CLASSES[cl], score) 生成标签文本，显示类别名称和置信度（保留两位小数）。
@@ -85,9 +225,9 @@ class VideoApp(BaseClass):
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.6, (0, 0, 255), 2)
             cv2.imshow(f'Detected Image {idx}', image)
+
         cv2.waitKey(5)  # 等待用户按键
                 '''
-
 
     def generate(self):
         
@@ -98,14 +238,14 @@ class VideoApp(BaseClass):
             # 队列都有数据
             if(self.queue_camera_a.full() and self.queue_camera_b.full()):
                 # 获得两个摄像头的推理结果
-                raw_img_a = self.queue_camera_a.get()
-                raw_img_b = self.queue_camera_b.get()
+                raw_img_first = self.queue_camera_a.get()
+                raw_img_second = self.queue_camera_b.get()
 
-                batch_boxes = self.detector.detect([copy.deepcopy(raw_img_a[1]), copy.deepcopy(raw_img_b[1])])
+                batch_boxes = self.detector.detect([copy.deepcopy(raw_img_first[1]), copy.deepcopy(raw_img_second[1])])
                 # 解析两个摄像头的推理结果
-                self.draw_box([raw_img_a[1], raw_img_b[1]], batch_boxes)
-
-
+                raw_img_first_darw = copy.deepcopy(raw_img_first[1])
+                raw_img_second_darw = copy.deepcopy(raw_img_second[1])
+                self.draw_box([raw_img_first_darw, raw_img_second_darw], batch_boxes)
             else:
                 '''
                 ret = True
@@ -115,7 +255,8 @@ class VideoApp(BaseClass):
                 continue
             # if not ret:
             #     break
-            frame = cv2.vconcat([raw_img_a[1], raw_img_b[1]])
+
+            frame = cv2.vconcat([raw_img_first_darw, raw_img_second_darw])
             _, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
             yield (b'--frame\r\n'
@@ -130,9 +271,22 @@ class VideoApp(BaseClass):
 
     def receive_coordinates(self):
         data = request.json
-        print(f"Received coordinates: {data}")
-        self.danger_area = data
+        data = video_app.raw_data_normalize(data)
+        #print(f"Received coordinates: {data}")
+        
+        # 判断设置的哪一个相机
+        camera_id = self.judge_select_camera(data)
+        # 设置对应相机的危险区域
+        if camera_id == CameraID.ID_FIRST:
+            self.danger_area_first.set(data)
+        else:
+            
+            self.danger_area_second.set(data)
+
         return jsonify(status="success")
+    
+    #def box_pos_normalize(self, data:dict):
+
 
     def run(self, host='0.0.0.0', debug=False, port=5000):
         self.app.run(host = host, debug=debug, port = port)

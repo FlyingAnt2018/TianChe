@@ -126,6 +126,7 @@ class DetModel(BaseClass):
                 curr_cls_box = np.array(curr_cls_box)
                 # curr_cls_box_old = np.copy(curr_cls_box)
                 curr_cls_box = xywh2xyxy(curr_cls_box)
+                curr_cls_box = self.clip_box(curr_cls_box)
                 curr_out_box = nms(curr_cls_box,iou_thres)
                 for k in curr_out_box:
                     output.append(curr_cls_box[k])
@@ -134,6 +135,19 @@ class DetModel(BaseClass):
         
         #outputs = np.array(outputs)
         return outputs
+    
+    def clip_box(self, curr_cls_box):
+        '''
+        将box规范化到图像范围内
+        '''
+        w_max = self.post_img_width - 1
+        h_max = self.post_img_height - 1
+        
+        curr_cls_box[:, 0:4:2] = np.clip(curr_cls_box[:, 0:4:2], 0, w_max)
+        curr_cls_box[:, 1:4:2] = np.clip(curr_cls_box[:, 1:4:2], 0, h_max)
+
+        return curr_cls_box
+
 
     @decorator_timer
     def onnx_run(self, sesson, input):
