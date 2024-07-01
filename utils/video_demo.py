@@ -4,7 +4,7 @@ import queue
 from datetime import datetime
 
 class VideoCaptureThread(threading.Thread):
-    def __init__(self, video_source, frame_queue, thread_name, img_size = (640, 384)):
+    def __init__(self, video_source, frame_queue, thread_name, img_size = (640, 384), img_flip = False):
         threading.Thread.__init__(self)
         self.video_source = video_source
         self.frame_queue = frame_queue
@@ -14,6 +14,7 @@ class VideoCaptureThread(threading.Thread):
         self.img_size = img_size
 
         self.switch_flag = True
+        self.flip = img_flip
 
     def run(self):
         self.cap = cv2.VideoCapture(self.video_source)
@@ -31,8 +32,10 @@ class VideoCaptureThread(threading.Thread):
             if self.switch_flag:
                 self.switch_flag = False
                 print(f"[Info] {self.thread_name} raw image h = {frame.shape[0]}, w = {frame.shape[1]}")
-
+            # frame = cv2.imread('D:\work\code/falconix/TianChe/tmp/63.png')
             frame = cv2.resize(frame, self.img_size)
+            if self.flip:
+                frame = cv2.flip(frame, 0)
 
             # Try to put the frame in the queue
             if not self.frame_queue.full():

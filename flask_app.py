@@ -75,7 +75,7 @@ class VideoApp(BaseClass):
         # 3. 创建两个生产者 线程
         if(os.name == 'nt'):
             self.producer_a = VideoCaptureThread(self.conf["camera_url_a"], 
-                                                 self.queue_camera_a, "cam_a", (int(self.conf["img_w"]), int(self.conf["img_h"])))
+                                                 self.queue_camera_a, "cam_a", (int(self.conf["img_w"]), int(self.conf["img_h"])), img_flip=eval(self.conf["img_flip"]))
             self.producer_b = VideoCaptureThread(self.conf["camera_url_b"], 
                                                  self.queue_camera_b, "cam_b",(int(self.conf["img_w"]), int(self.conf["img_h"])))
             # 启动线程
@@ -88,6 +88,7 @@ class VideoApp(BaseClass):
 
         self.danger_area_first = DangerArea()
         self.danger_area_second = DangerArea()
+        self.count = 0
 
     @staticmethod
     def raw_data_normalize(data):
@@ -235,6 +236,7 @@ class VideoApp(BaseClass):
             '''
             在这里拿 yolo 后处理的数据
             '''
+
             # 队列都有数据
             if(self.queue_camera_a.full() and self.queue_camera_b.full()):
                 # 获得两个摄像头的推理结果
@@ -255,12 +257,17 @@ class VideoApp(BaseClass):
                 continue
             # if not ret:
             #     break
-
-            frame = cv2.vconcat([raw_img_first_darw, raw_img_second_darw])
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            
+            self.count += 1
+            if(self.count > 1000):
+                self.count = 0
+            if self.count % 5 == 0:
+                frame = cv2.vconcat([raw_img_first_darw, raw_img_second_darw])
+                # frame = cv2.resize(frame, (320, 384))
+                _, buffer = cv2.imencode('.jpg', frame)
+                frame = buffer.tobytes()
+                yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
     def index(self):
         return render_template('help_button.html')

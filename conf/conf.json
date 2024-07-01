@@ -5,7 +5,7 @@
 
     
     "//":  "模型配置参数",
-    "onnx_path": "weights/model_bs2.onnx",
+    "onnx_path": "weights/model_bs2_ex3.onnx",
     "conf_thre": "0.5",
 
     "//":  "配置参数",
@@ -13,6 +13,7 @@
     "plateform_type": "win",
     
     "//":  "图像缩放参数",
+    "img_flip": "True",
     "img_w" : "640",
     "img_h" : "384"
 }
