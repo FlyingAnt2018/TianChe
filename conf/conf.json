@@ -1,7 +1,9 @@
 {
     "//":  "两台相机的 url",
-    "camera_url_a": "rtsp://admin:falconix12@10.168.2.172:554/h264/ch1/main/av_stream",
-    "camera_url_b": "rtsp://admin:falconix12@10.168.2.172:554/h264/ch1/main/av_stream",
+    "camera_url_a": "rtsp://admin:aa147258.@192.168.1.64:554/h264/ch1/main/av_stream",
+    "camera_url_a_": "D:/work/项目文档/源立信/300T/20240903_095421.mp4",
+    "camera_url_b": "rtsp://admin:aa147258.@192.168.1.63:554/h264/ch1/main/av_stream",
+    "camera_url_b_": "D:/work/项目文档/源立信/300T/20240903_095421.mp4",
 
     
     "//":  "模型配置参数",
@@ -15,5 +17,7 @@
     "//":  "图像缩放参数",
     "img_flip": "True",
     "img_w" : "640",
-    "img_h" : "384"
+    "img_h" : "384",
+
+    "save_path":"D:/work_space/images"
 }
