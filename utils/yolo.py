@@ -10,6 +10,15 @@ import copy
 from utils.common import decorator_timer, xywh2xyxy, nms
 CLASSES = ['P']
 
+def count_elements(nested_list):
+    count = 0
+    for element in nested_list:
+        if isinstance(element, list):
+            count += count_elements(element)  # 递归调用
+        else:
+            count += 1  # 统计非列表元素
+    return count
+
 class DetModel(BaseClass):
     def __init__(self, conf_path:str, time_measure=False):
         

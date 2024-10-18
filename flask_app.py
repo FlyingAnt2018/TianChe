@@ -6,7 +6,7 @@ import numpy as np
 from gevent import pywsgi
 
 from pathlib import Path
-from utils.yolo import DetModel, CLASSES
+from utils.yolo import DetModel, CLASSES, count_elements
 from datetime import datetime
 from os.path import join as opj
 
@@ -14,7 +14,7 @@ from multiprocessing import Process, Queue
 from flask import Flask, render_template, Response, request, jsonify
 
 from utils.baseclass import BaseClass, workspace
-from utils.video_demo import VideoCaptureThread
+from utils.video_demo import VideoCaptureThread, get_stamps
 
 from enum import Enum
 
@@ -52,7 +52,8 @@ class DangerArea:
     @property
     def pt_rb(self):
         return (self.box_area[2], self.box_area[3])
-
+    
+from utils.frame_diff import FrameDiff
 class VideoApp(BaseClass):
     '''
     负责将接收到的视频流推送到 远程浏览器
@@ -60,6 +61,8 @@ class VideoApp(BaseClass):
     def __init__(self, conf_path=""):
         super().__init__(conf_path)
 
+        self.frame_diff_first = FrameDiff([1256, 1405, 0, 1036])
+        self.frame_diff_second = FrameDiff([1005, 161, 0, 40])
         # 1. 解析 json文件
         self.app = Flask(__name__, template_folder=workspace / self.conf["template_folder"])
         self.app.add_url_rule('/', 'index_cavas', self.index)
@@ -240,14 +243,40 @@ class VideoApp(BaseClass):
             # 队列都有数据
             if(self.queue_camera_a.full() and self.queue_camera_b.full()):
                 # 获得两个摄像头的推理结果
-                raw_img_first = self.queue_camera_a.get()
-                raw_img_second = self.queue_camera_b.get()
+                raw_img_first_raw = self.queue_camera_a.get()
+                raw_img_second_raw = self.queue_camera_b.get()
+
+                
+                raw_img_first = copy.deepcopy(raw_img_first_raw)
+                raw_img_second = copy.deepcopy(raw_img_second_raw)
+
+                raw_img_first[1] = cv2.resize(raw_img_first[1], self.img_size)
+                raw_img_second[1] = cv2.resize(raw_img_second[1], self.img_size)
 
                 batch_boxes = self.detector.detect([copy.deepcopy(raw_img_first[1]), copy.deepcopy(raw_img_second[1])])
                 # 解析两个摄像头的推理结果
                 raw_img_first_darw = copy.deepcopy(raw_img_first[1])
                 raw_img_second_darw = copy.deepcopy(raw_img_second[1])
                 self.draw_box([raw_img_first_darw, raw_img_second_darw], batch_boxes)
+                
+                if(count_elements(batch_boxes) > 0):
+
+                    timestamps, ymd = get_stamps()
+                    folder_name = os.path.join(self.save_path, ymd)
+                    if not os.path.exists(folder_name):
+                        os.makedirs(folder_name)
+
+                    
+                    save_prefix = os.path.join(folder_name, timestamps)
+                    first_name = os.path.join(save_prefix + f"_first_{len(batch_boxes[0])}.jpg")
+                    second_name = os.path.join(save_prefix + f"_second_{len(batch_boxes[1])}.jpg")
+                    flag_first = self.frame_diff_first.run(copy.deepcopy(raw_img_first_raw[1]))
+                    flag_second = self.frame_diff_first.run(copy.deepcopy(raw_img_second_raw[1]))
+                    if not flag_first:
+                        cv2.imwrite(first_name, raw_img_first_raw[1])
+                    if not flag_second:
+                        cv2.imwrite(second_name, raw_img_second_raw[1])
+
             else:
                 '''
                 ret = True

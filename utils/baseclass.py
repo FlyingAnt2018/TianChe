@@ -21,3 +21,8 @@ class BaseClass:
         self.conf = json.loads(conf_path.read_text(encoding='utf-8'))
         self.post_img_width = int(self.conf["img_w"])
         self.post_img_height = int(self.conf["img_h"])
+
+        
+        self.img_size = (self.post_img_width, self.post_img_height)
+
+        self.save_path = self.conf["save_path"]

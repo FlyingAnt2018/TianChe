@@ -2,6 +2,15 @@ import cv2
 import threading
 import queue
 from datetime import datetime
+import time
+
+def get_stamps():
+    
+    from datetime import datetime
+    # 获取当前时间
+    now = datetime.now()
+    # 生成格式化的时间戳（时:分:秒）
+    return now.strftime("%Y%m%d%H%M%S"), now.strftime("%Y%m%d")
 
 class VideoCaptureThread(threading.Thread):
     def __init__(self, video_source, frame_queue, thread_name, img_size = (640, 384), img_flip = False):
@@ -28,12 +37,13 @@ class VideoCaptureThread(threading.Thread):
             # 图像缩放
             if not ret:
                 print(f"Failed to grab frame from {self.video_source}")
-                break
+                self.cap = cv2.VideoCapture(self.video_source)
+                continue
             if self.switch_flag:
                 self.switch_flag = False
                 print(f"[Info] {self.thread_name} raw image h = {frame.shape[0]}, w = {frame.shape[1]}")
             # frame = cv2.imread('D:\work\code/falconix/TianChe/tmp/63.png')
-            frame = cv2.resize(frame, self.img_size)
+            # frame = cv2.resize(frame, self.img_size)
             if self.flip:
                 frame = cv2.flip(frame, 0)
 
@@ -41,7 +51,7 @@ class VideoCaptureThread(threading.Thread):
             if not self.frame_queue.full():
                 # Put the frame in the queue
                 time_stamp = int(datetime.now().timestamp())
-                self.frame_queue.put((self.thread_name, frame, time_stamp))
+                self.frame_queue.put([self.thread_name, frame, time_stamp])
             '''
             else:
                 # If queue is full, replace the existing frame with the new frame
@@ -56,7 +66,7 @@ class VideoCaptureThread(threading.Thread):
             #if cv2.waitKey(1) & 0xFF == ord('q'):
             #    self.running = False
             #    break
-        
+            # time.sleep(0.5)
         self.cap.release()
 
     def stop(self):
